@@ -1,0 +1,8 @@
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/CMakeFiles/rebuild_cache.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/CMakeFiles/edit_cache.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/helloworld_shared/CMakeFiles/rebuild_cache.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/helloworld_shared/CMakeFiles/edit_cache.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/helloworld_shared/CMakeFiles/helloworld_shared.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/helloworld_test/CMakeFiles/rebuild_cache.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/helloworld_test/CMakeFiles/edit_cache.dir
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/build/helloworld_test/CMakeFiles/helloworld_test.dir

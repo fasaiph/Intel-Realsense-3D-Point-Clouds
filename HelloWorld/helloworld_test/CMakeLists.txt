@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(helloworld_test)
 
 set(CMAKE_CXX_STANDARD 11)
-set(PROJECT_LINK_LIBS libhelloworld.so)
+set(PROJECT_LINK_LIBS helloworld)
 link_directories(../helloworld_shared/build)
 
 include_directories(../helloworld_shared/include)
