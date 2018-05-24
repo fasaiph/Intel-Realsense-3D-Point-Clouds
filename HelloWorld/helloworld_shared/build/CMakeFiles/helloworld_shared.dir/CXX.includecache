@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/helloworld.h
+
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/helloworld_shared/src/helloworld.cpp
+helloworld.h
+/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/helloworld_shared/src/helloworld.h
+iostream
+-
+
