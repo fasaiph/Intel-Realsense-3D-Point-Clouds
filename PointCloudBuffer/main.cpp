@@ -6,8 +6,7 @@
 #include <string>
 #include <vector>
 
-//TODO: command line arg for num frames and resolution
-const int n_buffer = 10;
+//TODO: command line arg for num frames and resolution, save benchmark results to file
 inline bool prompt_yes_no(const std::string& prompt_msg);
 inline uint32_t get_user_selection(const std::string& prompt_msg);
 
@@ -15,24 +14,23 @@ inline uint32_t get_user_selection(const std::string& prompt_msg);
 
 int main() {
 
-    bool save_img_to_disk = prompt_yes_no("Save Images to Disk? ");
-    uint32_t num_frames = get_user_selection("How Many Frames to Grab? (Recommended: 120): ");
-    bool save_benchmark_to_disk = prompt_yes_no("Save Benchmark to Disk?");
+    //bool save_img_to_disk = prompt_yes_no("Save Images to Disk? ");
+    uint32_t n_buffer = get_user_selection("What Buffer Size? (Recommended: 10): ");
+    //bool save_benchmark_to_disk = prompt_yes_no("Save Benchmark to Disk?");
 
     long save_ms;
     long frame_receipts_ms;
     long frameset_wait_for_receipts_ms;
-    long time_taken_to_save[num_frames-1] = {};
-    long time_between_frame_receipts[num_frames-1] = {};
-    long time_taken_to_receive[num_frames-1] = {};
+    long time_taken_to_save[n_buffer-1] = {};
+    long time_between_frame_receipts[n_buffer-1] = {};
+    long time_taken_to_receive[n_buffer-1] = {};
 
     int fps_counter = 0; // for counting FPS
     int frame_counter = 0; // for counting how many frames until # of frames user has requested
 
     // initialize buffer
-    //TODO: read docs on this (vector of 10 rs2 objects)
-    std::vector<rs2::points> points_buffer(10);
-    std::vector<rs2::frame> color_buffer(10);
+    std::vector<rs2::points> points_buffer(n_buffer);
+    std::vector<rs2::frame> color_buffer(n_buffer);
     //rs2::points points_buffer[10] = {};
     //rs2::frame color_buffer[10] = {};
 
@@ -62,6 +60,7 @@ int main() {
         std::chrono::system_clock::time_point receive_time = std::chrono::system_clock::now();
         frame_receipts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(receive_time - prev_time).count();
         frameset_wait_for_receipts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(receive_time - start_waiting_for_frames).count();
+
         std::cout << "Time Taken to Receive:" << frameset_wait_for_receipts_ms << "ms \n";
         std::cout << "Time Between Two Frame Receipts: " << frame_receipts_ms << "ms \n";
 
@@ -104,9 +103,6 @@ int main() {
 
     // start saving and emptying buffer
     for(int i=0; i<n_buffer; i++){
-        std::cout << "Frame " << i << "\n";
-        std::cout << points_buffer[i] << "\n";
-        std::cout << color_buffer[i] << "\n";
 
         std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
         //points_buffer[i].export_to_ply("pointcloud.ply", color_buffer[i]);
