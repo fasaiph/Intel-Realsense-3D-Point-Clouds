@@ -80,8 +80,6 @@ int main() {
         points = pc.calculate(depth);
         pc.map_to(color);
 
-        points.export_to_ply("pointcloudtest.ply", color);
-
         // keep filling buffer while it is not full
         points_buffer[idx] = points;
         color_buffer[idx] = color;
@@ -112,7 +110,7 @@ int main() {
 
         std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
         //points_buffer[i].export_to_ply("pointcloud.ply", color_buffer[i]);
-        points_buffer[i].export_to_ply("../pointcloud" + std::to_string(idx) + ".ply", color_buffer[i]);
+        points_buffer[i].export_to_ply("../pointcloud" + std::to_string(i) + ".ply", color_buffer[i]);
 
         std::chrono::system_clock::time_point save_time = std::chrono::system_clock::now();
         save_ms = std::chrono::duration_cast<std::chrono::milliseconds>(save_time - start_time).count();
