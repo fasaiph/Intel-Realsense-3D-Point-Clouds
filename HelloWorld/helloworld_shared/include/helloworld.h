@@ -1,0 +1,6 @@
+#ifndef HELLOWORLD_SHARED_LIBRARY_H
+#define HELLOWORLD_SHARED_LIBRARY_H
+
+void hello();
+
+#endif
