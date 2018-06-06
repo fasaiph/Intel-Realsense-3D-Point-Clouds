@@ -1,0 +1,3 @@
+/home/afg04/ClionProjects/PointCloudBuffer/build/CMakeFiles/edit_cache.dir
+/home/afg04/ClionProjects/PointCloudBuffer/build/CMakeFiles/rebuild_cache.dir
+/home/afg04/ClionProjects/PointCloudBuffer/build/CMakeFiles/run_buffer.dir
