@@ -71,13 +71,19 @@ int main() {
 
         prev_time = receive_time;
 
-        // extract frames
-        auto depth = frames.get_depth_frame();
-        auto color = frames.get_color_frame();
+        // Align depth to color stream
+        rs2_stream color_stream = RS2_STREAM_COLOR;
+        rs2::align align(color_stream);
+        auto processed = align.process(frames);
+
+        // Get aligned frames
+        auto color = processed.get_color_frame();
+        auto depth = processed.get_depth_frame();
 
         // Extract point cloud
         points = pc.calculate(depth);
         pc.map_to(color);
+
 
         // keep filling buffer while it is not full
         points_buffer[idx] = points;
@@ -101,12 +107,16 @@ int main() {
     // stop pipeline and free camera
     p.stop();
 
-    // start saving and emptying buffer
+    // start saving
     for(int i=0; i<n_buffer; i++){
 
         std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
-        //points_buffer[i].export_to_ply("pointcloud.ply", color_buffer[i]);
-        points_buffer[i].export_to_ply("../pointcloud" + std::to_string(i) + ".ply", color_buffer[i]);
+
+        points_buffer[i].export_to_ply("../results/pointcloud/pc" + std::to_string(i) + ".ply", color_buffer[i]);
+
+        cv::Mat rgb8(cv::Size(1280, 720), CV_8UC3, (void *) color_buffer[i].get_data(), cv::Mat::AUTO_STEP);
+        cv::cvtColor(rgb8, rgb8, cv::COLOR_BGR2RGB);
+        cv::imwrite("../results/rgb/img" + std::to_string(i) + ".png", rgb8);
 
         std::chrono::system_clock::time_point save_time = std::chrono::system_clock::now();
         save_ms = std::chrono::duration_cast<std::chrono::milliseconds>(save_time - start_time).count();
@@ -121,7 +131,7 @@ int main() {
 }
 
 inline bool prompt_yes_no(const std::string& prompt_msg)
-{
+   {
     char ans;
     do
     {
