@@ -11,8 +11,8 @@
 #include "opencv/cv.hpp"
 
 // compile time flags to adjust behavior
-#define WARMUP 0
-#define TOTAL_SAVE 10
+#define WARMUP 10
+#define TOTAL_SAVE 50
 
 using namespace std::chrono;
 
@@ -40,7 +40,6 @@ public:
         // do sanity check to see if DATA's width, height ... etc match's this objects
 
         // copy into data
-        // TODO: seg fault here
        memcpy(data, realsense_data, (size_t)stride*height*sizeof(uint8_t));
     }
 
@@ -104,8 +103,8 @@ int main(int argc, char * argv[]) {
     rs2::pipeline pipe;
 
     rs2::config cfg;
-    cfg.enable_stream(RS2_STREAM_DEPTH);
-    cfg.enable_stream(RS2_STREAM_COLOR, RS2_FORMAT_RGB8);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_ANY, 15);
+    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
 
     // Start streaming with default recommended configuration
     auto profile = pipe.start(cfg);
@@ -116,7 +115,6 @@ int main(int argc, char * argv[]) {
 
 // Capturing and processing ----------------------------------------------------------------------------------------------------
     for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
-
         // Block program until frames arrive
         time0 = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         rs2::frameset frames = pipe.wait_for_frames();
@@ -138,12 +136,13 @@ int main(int argc, char * argv[]) {
         DepthFrame *save_depth_frame = new DepthFrame(depth.get_width(), depth.get_height());
 
         // Copy RGB data to object
-        save_video_frame -> set_image((uint8_t*)rgb.get_data());
+        save_video_frame->set_image((uint8_t *) rgb.get_data());
 
         auto width = depth.get_width();
         auto height = depth.get_height();
 
-        std::cout << "  depth=" << width<< "x" << height << "  rgb=" << rgb.get_width() << "x"
+        std::cout << "Frame " << save_index << std::endl;
+        std::cout << "  depth=" << width << "x" << height << "  rgb=" << rgb.get_width() << "x"
         << rgb.get_height() << std::endl;
 
         // Get x, y, z
@@ -162,7 +161,7 @@ int main(int argc, char * argv[]) {
                 auto dist = depth.get_distance(col, row);
                 rs2_deproject_pixel_to_point(point3d, &intrinsics, pixel2d, dist);
 
-                save_depth_frame -> set_cloud(row, col, point3d[0], point3d[1], point3d[2]);
+                save_depth_frame->set_cloud(row, col, point3d[0], point3d[1], point3d[2]);
             }
         }
 
