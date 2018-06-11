@@ -22,57 +22,68 @@ float dist_3d(const rs2_intrinsics& intr, const rs2::depth_frame& frame, pixel u
 
 class VideoFrame{
 public:
-    int set_data(const void * realsense_data){
-        data = realsense_data;
+    VideoFrame( int width , int height , int stride, int num_bands  ) {
+        this->width = width;
+        this->height = height;
+        this->stride = stride;
+        this->num_bands = num_bands;
+        this->data = new uint8_t[  stride*height*num_bands ];
     }
 
-    const void * get_data(void){
-        return data;
+    // TODO: look up c++ destructor
+    ~VideoFrame() {
+        delete this->data;
+        this->data = NULL;
     }
 
-    int set_stride_in_bytes(int realsense_stride){
-        stride = realsense_stride;
+    void set_image(uint8_t* realsense_data) {
+        // do sanity check to see if DATA's width, height ... etc match's this objects
+
+        // copy into data
+        // TODO: seg fault here
+       memcpy(data, realsense_data, (size_t)stride*height*sizeof(uint8_t));
     }
 
-    int get_stride_in_bytes(void){
-        return stride;
-    }
-private:
-    const void * data;
-    int stride;
+public:
+    int width, height, stride, num_bands;
+    uint8_t* data;
 };
+
 
 class DepthFrame
 {
 public:
-    int set_width(int realsense_width){
-        width = realsense_width;
+    DepthFrame( int width , int height) {
+        this->width = width;
+        this->height = height;
+        this->xyz = new float[ width*height*3 ];
     }
 
-    int get_width(void){
-        return width;
+    ~DepthFrame(){
+        delete this->xyz;
+        this->xyz = NULL;
     }
 
-    int set_height(int realsense_height){
-        height = realsense_height;
+    void set_cloud(int row, int col, float x, float y, float z) {
+        if(col > width || row > height){
+            std::cout << "Row or Col exceeds specified dimensions" << std::endl;
+        }
+
+        // if a pixel is invalid set xyz to -1 -1 -1
+        xyz[(col+row*width)*3] = x;
+        xyz[(col+row*width)*3+1] = y;
+        xyz[(col+row*width)*3+2] = z;
     }
 
-    int get_height(void){
-        return height;
-
-    }
-    float get_distance(int x, int y){
-        return distance[x][y];
-    }
-private:
+public:
     int width;
     int height;
-    float distance[height][width];
+    float *xyz;
 };
 
-int main(int argc, char * argv[])
-{
-    if( argc < 2 )
+
+int main(int argc, char * argv[]) {
+    if (argc < 2)
         throw std::runtime_error("need to specify output file");
 
     std::string output_path = argv[1];
@@ -85,8 +96,9 @@ int main(int argc, char * argv[])
     std::cout << "Enter main function" << std::endl;
 
     // initialize buffer
-    std::vector<VideoFrame*> color_buffer(TOTAL_SAVE);
-    std::vector<DepthFrame*> depth_buffer(TOTAL_SAVE);
+    std::vector<VideoFrame *> color_buffer(TOTAL_SAVE);
+    std::vector<DepthFrame *> depth_buffer(TOTAL_SAVE);
+    std::cout << "vector size: " << color_buffer.size() << std::endl;
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
@@ -102,10 +114,8 @@ int main(int argc, char * argv[])
     // Capture 30 frames to give autoexposure, etc. a chance to settle
     for (auto i = 0; i < WARMUP; ++i) pipe.wait_for_frames();
 
-    for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++ ) {
-
-        VideoFrame save_video_frame;
-        DepthFrame save_depth_frame;
+// Capturing and processing ----------------------------------------------------------------------------------------------------
+    for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
 
         // Block program until frames arrive
         time0 = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -122,24 +132,48 @@ int main(int argc, char * argv[])
         rs2::depth_frame depth = processed.get_depth_frame();
         rs2::video_frame rgb = processed.get_color_frame();
 
-        save_video_frame.set_data(rgb.get_data());
-        save_video_frame.set_stride_in_bytes(rgb.get_stride_in_bytes());
+        // Initialize save objects
+        VideoFrame *save_video_frame = new VideoFrame
+                (rgb.get_width(), rgb.get_height(), rgb.get_stride_in_bytes(), rgb.get_bytes_per_pixel());
+        DepthFrame *save_depth_frame = new DepthFrame(depth.get_width(), depth.get_height());
 
-        save_depth_frame.set_height(depth.get_height());
-        save_depth_frame.set_width(depth.get_width());
+        // Copy RGB data to object
+        save_video_frame -> set_image((uint8_t*)rgb.get_data());
 
-        // Store frames in buffer
-        depth_buffer[save_index] = &save_depth_frame;
-        color_buffer[save_index] = &save_video_frame;
+        auto width = depth.get_width();
+        auto height = depth.get_height();
 
-        std::cout << "  depth=" << depth.get_width() << "x" << depth.get_height() << "  rgb=" << rgb.get_width() << "x"
+        std::cout << "  depth=" << width<< "x" << height << "  rgb=" << rgb.get_width() << "x"
         << rgb.get_height() << std::endl;
+
+        // Get x, y, z
+        float point3d[3];
+        float pixel2d[2];
+
+        auto stream = profile.get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>();
+        auto intrinsics = stream.get_intrinsics(); // Calibration data
+
+        for (int row = 0; row < height; row++) {
+
+            for (int col = 0; col < width; col++) {
+                pixel2d[0] = col;
+                pixel2d[1] = row;
+
+                auto dist = depth.get_distance(col, row);
+                rs2_deproject_pixel_to_point(point3d, &intrinsics, pixel2d, dist);
+
+                save_depth_frame -> set_cloud(row, col, point3d[0], point3d[1], point3d[2]);
+            }
+        }
+
+        // Save objects to buffer
+        color_buffer.at(save_index) = save_video_frame;
+        depth_buffer.at(save_index) = save_depth_frame;
+
     }
 
-    auto stream = profile.get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>();
-    auto intrinsics = stream.get_intrinsics(); // Calibration data
-
-    for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++ ){
+// Saving -------------------------------------------------------------------------------------------------------------------
+    for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
 
         boost::basic_format<char> output_file = boost::format("%s%04d.txt") % output_path % save_index;
         std::cout << "Saving Frame to " << output_file.str() << std::endl;
@@ -148,52 +182,43 @@ int main(int argc, char * argv[])
         myfile.open(output_file.str());
         myfile << "# Realsense RGB + XYZ output\n";
 
-       // std::cout << depth_buffer[save_index] << "\n";
+        std::cout << "Got Stride: " << color_buffer[save_index]->stride << "\n";
+        myfile << "resolution " << depth_buffer[save_index]->width << " " << depth_buffer[save_index]->height <<
+        std::endl;
 
-        // Get the depth frame's dimensions
-     //   auto width = depth_buffer[save_index] -> get_width();
-     //   auto height = depth_buffer[save_index] -> get_height();
-//        auto width = depth.get_width();
-//        auto height = depth.get_height();
-
-
-        std::cout << "Got Stride: " << color_buffer[save_index] -> get_stride_in_bytes() <<"\n";
-        myfile << "resolution " << depth_buffer[save_index] -> get_width() << " " << depth_buffer[save_index] -> get_height() << std::endl;
-
-        float point3d[3];
-        float pixel2d[2];
+        auto height = depth_buffer[save_index] -> height;
+        auto width = depth_buffer[save_index] -> width;
 
         // Query the distance from the camera to the object in the center of the image
-        const auto *rgb_row = (const uint8_t *) color_buffer[save_index] -> get_data();
-        auto stride = color_buffer[save_index] -> get_stride_in_bytes();
-        for (int row = 0; row < depth_buffer[save_index] -> get_height(); row++, rgb_row += stride) {
+        const auto *rgb_row = (const uint8_t *) color_buffer[save_index]->data;
+        auto stride = color_buffer[save_index]->stride;
 
+        for (int row = 0; row < height; row++, rgb_row += stride) {
             auto rgb_ptr = rgb_row;
 
-            for (int col = 0; col < depth_buffer[save_index] -> get_width(); col++) {
-
-                pixel2d[0] = col;
-                pixel2d[1] = row;
-
-                auto dist = depth_buffer[save_index] -> get_distance(col, row);
-                rs2_deproject_pixel_to_point(point3d, &intrinsics, pixel2d, dist);
+            for (int col = 0; col < width; col++) {
+                float x = depth_buffer[save_index] -> xyz[(col+row*width)*3];
+                float y = depth_buffer[save_index] -> xyz[(col+row*width)*3+1];
+                float z = depth_buffer[save_index] -> xyz[(col+row*width)*3+2];
 
                 int r = *rgb_ptr++;
                 int g = *rgb_ptr++;
                 int b = *rgb_ptr++;
-
-                myfile << r << " " << g << " " << b << " " << point3d[0] << " " << point3d[1] << " " << point3d[2]
-                << std::endl;
+                // myfile << x << " " << y << " " << z << std::endl;
+                myfile << r << " " << g << " " << b << " " << x << " " << y << " " << z << std::endl;
             }
         }
 
         myfile.close();
-        time3 = duration_cast<milliseconds >( system_clock::now().time_since_epoch() );
-        std::cout << "Saved!  wait=" << (time1-time0).count() << " align="<< (time2-time1).count() << " save=" << (time3-time2).count() << std::endl;
+        time3 = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        std::cout << "Saved!  wait=" << (time1 - time0).count() << " align=" << (time2 - time1).count() <<
+        " save=" << (time3 - time2).count() << std::endl;
     }
     std::cout << "Closing" << std::endl;
 
     return EXIT_SUCCESS;
+
+
 }
 
 float dist_3d(const rs2_intrinsics& intr, const rs2::depth_frame& frame, pixel u, pixel v)
