@@ -9,10 +9,11 @@
 #include <boost/format.hpp>
 #include <chrono>
 #include "opencv/cv.hpp"
+#include <boost/program_options.hpp>
 
 // compile time flags to adjust behavior
 #define WARMUP 10
-#define TOTAL_SAVE 50
+//#define TOTAL_SAVE 50
 
 using namespace std::chrono;
 
@@ -82,8 +83,52 @@ public:
 
 
 int main(int argc, char * argv[]) {
+    int frames_per_second = 6;
+    int total_save = 50;
+
+    boost::program_options::options_description desc("Allowed options");
+    desc.add_options()
+            ("help", "produce help message")
+            ("fps", boost::program_options::value<int>(), "set fps")
+            ("nframes", boost::program_options::value<int>(), "set number of frames")
+            ;
+
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+    boost::program_options::notify(vm);
+
     if (argc < 2)
         throw std::runtime_error("need to specify output file");
+
+    if (vm.count("help")){
+        std::cout << desc << std::endl;
+        return 0;
+    }
+
+    if (!vm.count("fps")){
+        std::cout << "Using default fps of 6 fps" << std::endl;
+    }
+
+    if (!vm.count("nframes")){
+        std::cout << "Using default number of frames of 50 frames" << std::endl;
+    }
+
+    if (vm.count("fps")){
+        int fps = vm["fps"].as<int>();
+        if(fps == 6 || fps == 15 || fps == 30){
+            std::cout << "fps was set to " << fps << std::endl;
+            frames_per_second = vm["fps"].as<int>();
+        }
+        else {
+            std::cout << "fps must be 6, 15, or 30 for Camera D415" << std::endl;
+            return 0;
+        }
+    }
+
+    if (vm.count("nframes")){
+        std::cout << "nframes was set to " << vm["nframes"].as<int>() << std::endl;
+        total_save = vm["nframes"].as<int>();
+    }
 
     std::string output_path = argv[1];
 
@@ -95,16 +140,16 @@ int main(int argc, char * argv[]) {
     std::cout << "Enter main function" << std::endl;
 
     // initialize buffer
-    std::vector<VideoFrame *> color_buffer(TOTAL_SAVE);
-    std::vector<DepthFrame *> depth_buffer(TOTAL_SAVE);
+    std::vector<VideoFrame *> color_buffer(total_save);
+    std::vector<DepthFrame *> depth_buffer(total_save);
     std::cout << "vector size: " << color_buffer.size() << std::endl;
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
 
     rs2::config cfg; //valid fps: 6, 15, 30 at full resolution
-    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_ANY, 6);
-    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 6);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_ANY, frames_per_second);
+    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, frames_per_second);
 
     // Start streaming with default recommended configuration
     auto profile = pipe.start(cfg);
@@ -118,10 +163,10 @@ int main(int argc, char * argv[]) {
     std::chrono::system_clock::time_point start_capture = std::chrono::system_clock::now();
 
 // Capturing and processing ----------------------------------------------------------------------------------------------------
-    for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
+    for (auto save_index = 0; save_index < total_save; save_index++) {
         // Print out FPS
         if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - fps_time).count() == 1){
-            std::cout << "FPS: " << fps_counter << " -------------------------------------------------------\n";
+            std::cout << "FPS: " << fps_counter << " -------------------------------------------------------" << std::endl;
             fps_counter = 0;
             fps_time = std::chrono::system_clock::now();
         }
@@ -183,19 +228,19 @@ int main(int argc, char * argv[]) {
     }
 
     std::chrono::system_clock::time_point end_capture = std::chrono::system_clock::now();
-    std::cout << "Total Capture Time:" << std::chrono::duration_cast<std::chrono::seconds>(end_capture - start_capture).count() << "s \n";
+    std::cout << "Total Capture Time:" << std::chrono::duration_cast<std::chrono::seconds>(end_capture - start_capture).count() << "s" << std::endl;
 
 // Saving -------------------------------------------------------------------------------------------------------------------
-    for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
+    for (auto save_index = 0; save_index < total_save; save_index++) {
 
         boost::basic_format<char> output_file = boost::format("%s%04d.txt") % output_path % save_index;
         std::cout << "Saving Frame to " << output_file.str() << std::endl;
 
         std::ofstream myfile;
         myfile.open(output_file.str());
-        myfile << "# Realsense RGB + XYZ output\n";
+        myfile << "# Realsense RGB + XYZ output" << std::endl;
 
-        std::cout << "Got Stride: " << color_buffer[save_index]->stride << "\n";
+        std::cout << "Got Stride: " << color_buffer[save_index]->stride << std::endl;
         myfile << "resolution " << depth_buffer[save_index]->width << " " << depth_buffer[save_index]->height <<
         std::endl;
 
