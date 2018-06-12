@@ -103,8 +103,8 @@ int main(int argc, char * argv[]) {
     rs2::pipeline pipe;
 
     rs2::config cfg; //valid fps: 6, 15, 30 at full resolution
-    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_ANY, 15);
-    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_ANY, 6);
+    cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 6);
 
     // Start streaming with default recommended configuration
     auto profile = pipe.start(cfg);
