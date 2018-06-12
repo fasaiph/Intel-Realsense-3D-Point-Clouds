@@ -89,8 +89,8 @@ int main(int argc, char * argv[]) {
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
-            ("fps", boost::program_options::value<int>(), "set fps")
-            ("nframes", boost::program_options::value<int>(), "set number of frames")
+            ("fps", boost::program_options::value<int>(), "set fps to 6, 15, or 30")
+            ("nframes", boost::program_options::value<int>(), "set number of frames (have not tested maximum limit to memory yet)")
             ;
 
     boost::program_options::variables_map vm;
