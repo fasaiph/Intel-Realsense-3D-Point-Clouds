@@ -102,7 +102,7 @@ int main(int argc, char * argv[]) {
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
 
-    rs2::config cfg;
+    rs2::config cfg; //valid fps: 6, 15, 30 at full resolution
     cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_ANY, 15);
     cfg.enable_stream(RS2_STREAM_COLOR, 1280, 720, RS2_FORMAT_RGB8, 15);
 
@@ -113,8 +113,18 @@ int main(int argc, char * argv[]) {
     // Capture 30 frames to give autoexposure, etc. a chance to settle
     for (auto i = 0; i < WARMUP; ++i) pipe.wait_for_frames();
 
+    int fps_counter = 0;
+    std::chrono::system_clock::time_point fps_time = std::chrono::system_clock::now();
+    std::chrono::system_clock::time_point start_capture = std::chrono::system_clock::now();
+
 // Capturing and processing ----------------------------------------------------------------------------------------------------
     for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
+        // Print out FPS
+        if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - fps_time).count() == 1){
+            std::cout << "FPS: " << fps_counter << " -------------------------------------------------------\n";
+            fps_counter = 0;
+            fps_time = std::chrono::system_clock::now();
+        }
         // Block program until frames arrive
         time0 = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         rs2::frameset frames = pipe.wait_for_frames();
@@ -169,7 +179,11 @@ int main(int argc, char * argv[]) {
         color_buffer.at(save_index) = save_video_frame;
         depth_buffer.at(save_index) = save_depth_frame;
 
+        fps_counter++;
     }
+
+    std::chrono::system_clock::time_point end_capture = std::chrono::system_clock::now();
+    std::cout << "Total Capture Time:" << std::chrono::duration_cast<std::chrono::seconds>(end_capture - start_capture).count() << "s \n";
 
 // Saving -------------------------------------------------------------------------------------------------------------------
     for (auto save_index = 0; save_index < TOTAL_SAVE; save_index++) {
