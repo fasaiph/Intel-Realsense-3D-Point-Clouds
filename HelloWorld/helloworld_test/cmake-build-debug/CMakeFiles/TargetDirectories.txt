@@ -1,3 +1,0 @@
-/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/helloworld_test/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/helloworld_test/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/fphuathavornskul/GNU-dev-practice/HelloWorld/helloworld_test/cmake-build-debug/CMakeFiles/helloworld_test.dir

@@ -1,4 +1,0 @@
-/private/var/folders/js/dmqykjsj0qj5wgpmvt41gw8h75pkzt/T/AppTranslocation/31E4CE1F-C54F-40D8-9BD7-61798D750013/d/CLion.app/Contents/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /Users/fphuathavornskul/GNU-dev-practice/helloworld_shared
--- Configuring done
--- Generating done
--- Build files have been written to: /Users/fphuathavornskul/GNU-dev-practice/helloworld_shared/cmake-build-debug
